@@ -102,6 +102,12 @@ li button{min-height:40px;padding:6px 12px;font-size:.85rem}
 .tabs button[aria-current="page"]{color:var(--tithe);background:var(--bg)}
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:12px 20px;border-radius:20px;font-weight:700;font-size:.92rem;opacity:0;pointer-events:none;transition:all .3s;z-index:40;width:max-content;max-width:88%;text-align:center}
 #toast.on{opacity:1;transform:translate(-50%,0)}
+.step{display:flex;align-items:center;justify-content:center;gap:14px;margin:12px 0}
+.step button{width:60px;min-height:56px;padding:0;font-size:1.6rem;font-weight:700;border-radius:16px;background:var(--bg)}
+.step b{min-width:56px;text-align:center;font-size:2rem;font-weight:800}
+.rate{display:flex;align-items:center;gap:6px;font-weight:700}
+.rate input{width:76px;min-height:44px;padding:6px 10px;font-weight:800}
+.go.alt{background:linear-gradient(135deg,var(--save),var(--c3));box-shadow:0 8px 20px rgba(16,185,129,.3)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -140,6 +146,23 @@ li button{min-height:40px;padding:6px 12px;font-size:.85rem}
       <div class="hr"><div><h2 style="margin:0">Car payoff</h2><div class="mute" id="gof"></div></div><div class="gs" id="gsaved">$0</div></div>
       <div class="track"><span class="mk" id="mk">🚗</span><div class="bar" role="progressbar" aria-label="Car payoff progress" aria-valuemin="0" aria-valuemax="100" id="gbar"><i id="gfill" style="background:var(--car);width:0"></i></div></div>
       <div class="mute" id="gnote" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <section id="t-earn" hidden>
+    <div class="eyebrow">Colin’s</div>
+    <h1>Ways to earn</h1>
+    <div class="nav"><button data-d="-1" aria-label="Previous month">&lsaquo;</button><b class="ml"></b><button data-d="1" aria-label="Next month">&rsaquo;</button></div>
+    <div class="card hero"><div class="mute" id="etl"></div><div class="gs" id="etot" style="font-size:2.6rem;margin:6px 0">$0</div><div class="mute" id="enote"></div></div>
+    <div id="earnlist"></div>
+    <div class="card">
+      <h2>Something else</h2>
+      <div class="g2">
+        <label class="sp">What for<input type="text" id="oe" placeholder="Extra chore, gift, bonus…" maxlength="60"></label>
+        <div class="aw sp"><span>$</span><input type="number" id="oa" min="0" step="0.01" inputmode="decimal" placeholder="0.00" aria-label="Amount"></div>
+        <button class="go sp" id="oadd">Add to this month</button>
+      </div>
+      <div class="mute" id="oerr" style="margin-top:8px;min-height:1.2em;color:var(--car)"></div>
     </div>
   </section>
 
@@ -193,6 +216,7 @@ li button{min-height:40px;padding:6px 12px;font-size:.85rem}
 <div id="toast" role="status"></div>
 <nav class="tabs" aria-label="Sections">
   <button data-t="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+  <button data-t="earn"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>Earn</button>
   <button data-t="bank"><svg viewBox="0 0 24 24"><path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg>Bank</button>
   <button data-t="hist"><svg viewBox="0 0 24 24"><path d="M5 20v-7M12 20V5M19 20v-11"/></svg>History</button>
   <button data-t="set"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Buckets</button>
@@ -218,6 +242,7 @@ var BILLS={id:"bills",name:"Bills/etc",kind:"fixed",v:0,note:"Cell phone, gas",c
 if(!st.buckets){st.buckets=[{id:"tithe",name:"Tithe",kind:"pct",v:st.tithe!=null?st.tithe:10,col:"--tithe"},{id:"save",name:"Savings",kind:"pct",v:st.save!=null?st.save:20,col:"--save"},{id:"car",name:"Car payment",kind:"car",col:"--car"},BILLS,{id:"rest",name:"Spending",kind:"rest",col:"--spend"}];st.billsAdded=true}
 if(!st.billsAdded){var ri=st.buckets.map(function(b){return b.kind}).indexOf("rest");st.buckets.splice(ri<0?st.buckets.length:ri,0,BILLS);st.billsAdded=true}
 if(!st.bank)st.bank={};
+if(!st.earn)st.earn=[{id:"a",name:"Weekly A",rate:5,unit:"for each A"},{id:"vol",name:"Volunteering",rate:10,unit:"per hour"}];
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
 var $=function(i){return document.getElementById(i)};
 var money=function(n){return "$"+n.toLocaleString(undefined,{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2})};
@@ -302,6 +327,27 @@ function renderBank(){
     r.appendChild(x);li.appendChild(l);li.appendChild(r);bl.appendChild(li)});
 }
 
+var qtys={};
+function logIncome(src,amt,earn,qty){var d=view===cur?today:view+"-01";st.entries.push({id:Date.now()+Math.random(),date:d,src:src,amt:r2(amt),earn:earn,qty:qty});persist();render();toast("Added "+money(r2(amt))+" for "+label(view)+". It funds "+label(shift(view,1))+".")}
+function renderEarn(){
+  var inM=st.entries.filter(function(e){return e.date.slice(0,7)===view&&e.earn}),tot=0;
+  inM.forEach(function(e){tot+=e.amt});
+  $("etl").textContent="Earned from rewards in "+label(view);$("etot").textContent=money(r2(tot));
+  $("enote").textContent="Counts toward the "+label(shift(view,1))+" budget."+(view===cur?"":" Entries are dated the 1st of the month.");
+  var w=$("earnlist");w.textContent="";
+  st.earn.forEach(function(t){
+    var n=0,a=0;inM.forEach(function(e){if(e.earn===t.id){n+=e.qty||1;a+=e.amt}});
+    var q=qtys[t.id]||1,c=el("div","card");
+    var h=el("div","hr");var l=el("div");l.appendChild(el("h2",null,t.name));l.lastChild.style.margin="0";l.appendChild(el("div","mute",n?"This month: "+n+" · "+money(r2(a)):"None yet this month"));
+    var r=el("div","rate");r.appendChild(el("span",null,"$"));var ri=el("input");ri.type="number";ri.min=0;ri.step="0.5";ri.inputMode="decimal";ri.value=t.rate;ri.setAttribute("aria-label",t.name+" dollars "+t.unit);
+    ri.onchange=function(){t.rate=Math.max(0,r2(parseFloat(ri.value)||0));persist();render()};r.appendChild(ri);r.appendChild(el("span","mute",t.unit));
+    h.appendChild(l);h.appendChild(r);c.appendChild(h);
+    var st2=el("div","step");var mi=el("button",null,"−");mi.setAttribute("aria-label","One less");mi.onclick=function(){qtys[t.id]=Math.max(1,q-1);renderEarn()};
+    var pl=el("button",null,"+");pl.setAttribute("aria-label","One more");pl.onclick=function(){qtys[t.id]=Math.min(99,q+1);renderEarn()};
+    st2.appendChild(mi);st2.appendChild(el("b",null,String(q)));st2.appendChild(pl);c.appendChild(st2);
+    var ad=el("button","go alt","Add "+money(r2(t.rate*q)));ad.onclick=function(){qtys[t.id]=1;logIncome(t.name+(q>1?" ×"+q:""),t.rate*q,t.id,q)};c.appendChild(ad);
+    w.appendChild(c)});
+}
 function monthOpts(sel,sv,back,fwd){var keys=[],i;for(i=-back;i<=fwd;i++)keys.push(shift(cur,i));if(keys.indexOf(sv)<0){keys.push(sv);keys.sort()}
   sel.textContent="";keys.forEach(function(k){var o=document.createElement("option");o.value=k;o.textContent=label(k);sel.appendChild(o)});sel.value=sv}
 
@@ -326,10 +372,10 @@ function renderSet(){
   $("pg").value=c.total;$("pm").value=c.months;monthOpts($("pf"),c.start,12,36);
   $("pspend").textContent="The car payment is "+money(ci.base)+" a month, taken before Spending.";
 }
-function render(){safe(renderHome);safe(renderHist);safe(renderBank);safe(renderSet)}
+function render(){safe(renderHome);safe(renderEarn);safe(renderHist);safe(renderBank);safe(renderSet)}
 
 function syncBank(){var m=$("bm").value;$("bv").value=st.bank[m]!=null?st.bank[m]:""}
-function showTab(t){["home","bank","hist","set"].forEach(function(x){$("t-"+x).hidden=x!==t});
+function showTab(t){["home","earn","bank","hist","set"].forEach(function(x){$("t-"+x).hidden=x!==t});
   Array.prototype.forEach.call(document.querySelectorAll(".tabs button"),function(b){if(b.getAttribute("data-t")===t)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
   try{window.scrollTo(0,0)}catch(e){}}
 Array.prototype.forEach.call(document.querySelectorAll(".tabs button"),function(b){b.onclick=function(){showTab(b.getAttribute("data-t"))}});
@@ -349,6 +395,9 @@ $("add").onclick=function(){
   persist();$("a").value="";$("s").value="";view=d.slice(0,7);render();
   toast("Added "+money(r2(a))+". It funds "+label(shift(view,1))+".")};
 [["a","add"],["s","add"],["bv","bsave"]].forEach(function(p){$(p[0]).onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();$(p[1]).click()}}});
+$("oadd").onclick=function(){var a=parseFloat($("oa").value),d=$("oe").value.trim();
+  if(!(a>0)){$("oerr").textContent="Enter an amount greater than 0.";return}
+  $("oerr").textContent="";$("oa").value="";$("oe").value="";logIncome(d||"Other",a,"other",1)};
 function addB(kind){
   var used=st.buckets.map(function(b){return b.col}),col=PAL.filter(function(c){return used.indexOf(c)<0})[0]||PAL[st.buckets.length%PAL.length];
   var at=st.buckets.map(function(b){return b.kind}).indexOf("rest");if(at<0)at=st.buckets.length;
